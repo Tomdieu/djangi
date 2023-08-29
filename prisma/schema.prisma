@@ -38,13 +38,13 @@ model Session {
 }
 
 model User {
-  id                  String             @id @default(cuid())
+  id                  String               @id @default(cuid())
   name                String?
-  email               String?            @unique
+  email               String?              @unique
   emailVerified       DateTime?
   image               String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   accounts            Account[]
   sessions            Session[]
   tontines            Tontine[]
@@ -57,7 +57,10 @@ model User {
   cotisationsAffilies CotisationMembre[]
   contributions       Contribution[]
   reunions            Reunion[]
-  reunionsParticipes  ReunionMembre[]
+  reunionsParticipes  ParticipantReunion[]
+  rapportsRediges     Rapport[]
+  prets               Pret[]
+  demandePrets        DemandePret[]
 }
 
 model VerificationRequest {
@@ -74,17 +77,20 @@ model VerificationRequest {
 // Tontine
 
 model Tontine {
-  id                 Int          @id @default(autoincrement())
+  id                 Int           @id @default(autoincrement())
   nom                String
   slogan             String
   reglementInterieur String
   creatorId          String
-  createdBy          User         @relation(fields: [creatorId], references: [id])
+  createdBy          User          @relation(fields: [creatorId], references: [id])
   membres            Membre[]
   invitations        Invitation[]
   elections          Election[]
   cotisations        Cotisation[]
   reunions           Reunion[]
+  fonds              Fond[]
+  Pret               Pret[]
+  demandePrets       DemandePret[]
 }
 
 model Membre {
@@ -186,19 +192,36 @@ model Contribution {
 }
 
 model Reunion {
-  id           String          @id @default(cuid())
+  id           String               @id @default(cuid())
   tontineId    Int
-  tontine      Tontine         @relation(fields: [tontineId], references: [id])
+  tontine      Tontine              @relation(fields: [tontineId], references: [id])
   dateReunion  DateTime
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
   creatorId    String
-  createdBy    User            @relation(fields: [creatorId], references: [id])
-  particapants ReunionMembre[]
+  createdBy    User                 @relation(fields: [creatorId], references: [id])
+  particapants ParticipantReunion[]
   rapports     Rapport[]
+  chatReunions ChatReunion?
 }
 
-model ReunionMembre {
+model ChatReunion {
+  id        String    @id @default(cuid())
+  reunion   Reunion   @relation(fields: [reunionId], references: [id])
+  reunionId String    @unique
+  messages  Message[]
+}
+
+model Message {
+  id      Int         @id @default(autoincrement())
+  url     String?
+  contenu String
+  type    String      @default("text") // type: text, image, video, audio, document
+  chat    ChatReunion @relation(fields: [chatId], references: [id])
+  chatId  String
+}
+
+model ParticipantReunion {
   id        Int      @id @default(autoincrement())
   reunionId String
   membreId  String
@@ -215,7 +238,55 @@ model Rapport {
   contenu   String
   reunion   Reunion  @relation(fields: [reunionId], references: [id])
   creatorId String
-  createdBy User @relation(fields:[creatorId],references:[id])
+  createdBy User     @relation(fields: [creatorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Fond {
+  id          String  @id @default(cuid())
+  tontineId   Int
+  tontine     Tontine @relation(fields: [tontineId], references: [id])
+  typeFond    String // typeFond: fonds de roulement, fonds de solidarité, fonds de développement
+  nom         String
+  regles      String
+  objectif    String
+  montantBase Int
+}
+
+model DemandePret {
+  id        String   @id @default(cuid())
+  tontineId Int
+  tontine   Tontine  @relation(fields: [tontineId], references: [id])
+  membreId  String
+  membre    User     @relation(fields: [membreId], references: [id])
+  raison    String
+  montant   Int
+  status    String   @default("pending") // status: pending, accepted, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pret {
+  id               String   @id @default(cuid())
+  tontineId        Int
+  tontine          Tontine  @relation(fields: [tontineId], references: [id])
+  memberId         String
+  member           User     @relation(fields: [memberId], references: [id])
+  raison           String
+  datePaiementReel DateTime
+  tauxInteret      Int
+  tauxSanction     Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  titre     String
+  contenu   String
+  status    String   @default("pending") // status: pending, read
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
