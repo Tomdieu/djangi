@@ -9,3 +9,284 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model Account {
+  id                 String    @id @default(cuid())
+  userId             String
+  providerType       String
+  providerId         String
+  providerAccountId  String
+  refreshToken       String?
+  accessToken        String?
+  accessTokenExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id])
+
+  @@unique([providerId, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String?              @unique
+  emailVerified       DateTime?
+  image               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  accounts            Account[]
+  sessions            Session[]
+  tontines            Tontine[]
+  membres             Membre[]
+  invitations         Invitation[]
+  elections           Election[]
+  candidats           Candidat[]
+  votes               Vote[]
+  cotisations         Cotisation[]
+  cotisationsAffilies CotisationMembre[]
+  contributions       Contribution[]
+  reunions            Reunion[]
+  reunionsParticipes  ParticipantReunion[]
+  rapportsRediges     Rapport[]
+  prets               Pret[]
+  demandePrets        DemandePret[]
+}
+
+model VerificationRequest {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
+// Tontine
+
+model Tontine {
+  id                 Int           @id @default(autoincrement())
+  nom                String
+  slogan             String
+  reglementInterieur String
+  creatorId          String
+  createdBy          User          @relation(fields: [creatorId], references: [id])
+  membres            Membre[]
+  invitations        Invitation[]
+  elections          Election[]
+  cotisations        Cotisation[]
+  reunions           Reunion[]
+  fonds              Fond[]
+  Pret               Pret[]
+  demandePrets       DemandePret[]
+}
+
+model Membre {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  tontineId Int
+  user      User     @relation(fields: [userId], references: [id])
+  tontine   Tontine  @relation(fields: [tontineId], references: [id])
+  function  String   @default("membre") // function: membre, secretaire, tresorier, president,scretaire adjoint,commissaire aux comptes,commissaire aux comptes adjoint
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invitation {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  tontineId Int
+  status    String   @default("pending") // status: pending, accepted, rejected
+  user      User     @relation(fields: [userId], references: [id])
+  tontine   Tontine  @relation(fields: [tontineId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Election {
+  id               Int        @id @default(autoincrement())
+  creatorId        String
+  tontineId        Int
+  terme            String
+  createdBy        User       @relation(fields: [creatorId], references: [id])
+  tontine          Tontine    @relation(fields: [tontineId], references: [id])
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  dateFinCandature DateTime
+  dateDebutVote    DateTime
+  dateFinVote      DateTime
+  // tempRenouvelable 
+  candidats        Candidat[]
+}
+
+model Candidat {
+  id             Int      @id @default(autoincrement())
+  userId         String
+  electionId     Int
+  user           User     @relation(fields: [userId], references: [id])
+  election       Election @relation(fields: [electionId], references: [id])
+  nombreVoix     Int
+  posteCandidate String // posteCandidate: secretaire, tresorier, president,scretaire adjoint,commissaire aux comptes,commissaire aux comptes adjoint
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  Vote           Vote[]
+}
+
+model Vote {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  candidatId Int
+  user       User     @relation(fields: [userId], references: [id])
+  candidat   Candidat @relation(fields: [candidatId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Cotisation {
+  id            String             @id @default(cuid())
+  idTontine     Int
+  nom           String
+  tontine       Tontine            @relation(fields: [idTontine], references: [id])
+  montant       Int
+  cycle         String // cycle: hebdomadaire, mensuel, trimestriel, semestriel, annuel
+  creatorId     String
+  createdBy     User               @relation(fields: [creatorId], references: [id])
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  membres       CotisationMembre[]
+  contributions Contribution[]
+}
+
+model CotisationMembre {
+  id           Int        @id @default(autoincrement())
+  cotisationId String
+  membreId     String
+  nombrePart   Int
+  cotisation   Cotisation @relation(fields: [cotisationId], references: [id])
+  membre       User       @relation(fields: [membreId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Contribution {
+  id           Int        @id @default(autoincrement())
+  cotisationId String
+  membreId     String
+  nombrePart   Int
+  cotisation   Cotisation @relation(fields: [cotisationId], references: [id])
+  membre       User       @relation(fields: [membreId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Reunion {
+  id           String               @id @default(cuid())
+  tontineId    Int
+  tontine      Tontine              @relation(fields: [tontineId], references: [id])
+  dateReunion  DateTime
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  creatorId    String
+  createdBy    User                 @relation(fields: [creatorId], references: [id])
+  particapants ParticipantReunion[]
+  rapports     Rapport[]
+  chatReunions ChatReunion?
+}
+
+model ChatReunion {
+  id        String    @id @default(cuid())
+  reunion   Reunion   @relation(fields: [reunionId], references: [id])
+  reunionId String    @unique
+  messages  Message[]
+}
+
+model Message {
+  id      Int         @id @default(autoincrement())
+  url     String?
+  contenu String
+  type    String      @default("text") // type: text, image, video, audio, document
+  chat    ChatReunion @relation(fields: [chatId], references: [id])
+  chatId  String
+}
+
+model ParticipantReunion {
+  id        Int      @id @default(autoincrement())
+  reunionId String
+  membreId  String
+  reunion   Reunion  @relation(fields: [reunionId], references: [id])
+  membre    User     @relation(fields: [membreId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Rapport {
+  id        String   @id @default(cuid())
+  reunionId String
+  titre     String
+  contenu   String
+  reunion   Reunion  @relation(fields: [reunionId], references: [id])
+  creatorId String
+  createdBy User     @relation(fields: [creatorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Fond {
+  id          String  @id @default(cuid())
+  tontineId   Int
+  tontine     Tontine @relation(fields: [tontineId], references: [id])
+  typeFond    String // typeFond: fonds de roulement, fonds de solidarité, fonds de développement
+  nom         String
+  regles      String
+  objectif    String
+  montantBase Int
+}
+
+model DemandePret {
+  id        String   @id @default(cuid())
+  tontineId Int
+  tontine   Tontine  @relation(fields: [tontineId], references: [id])
+  membreId  String
+  membre    User     @relation(fields: [membreId], references: [id])
+  raison    String
+  montant   Int
+  status    String   @default("pending") // status: pending, accepted, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pret {
+  id               String   @id @default(cuid())
+  tontineId        Int
+  tontine          Tontine  @relation(fields: [tontineId], references: [id])
+  memberId         String
+  member           User     @relation(fields: [memberId], references: [id])
+  raison           String
+  datePaiementReel DateTime
+  tauxInteret      Int
+  tauxSanction     Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  titre     String
+  contenu   String
+  status    String   @default("pending") // status: pending, read
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
