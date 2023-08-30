@@ -6,7 +6,7 @@ type AuthLayoutProps = {
 
 const AuthLayout:React.FC<AuthLayoutProps> = ({children}) => {
     return (
-        <div className="w-full ">
+        <div className="w-full h-full flex">
             
         </div>
     )
